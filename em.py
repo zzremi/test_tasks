@@ -1,12 +1,12 @@
 '''
-Two dimensional k-means algorithm for two clusters of data
+Two dimensional EM algorithm for two clusters of data
 '''
 
-
 import numpy as np
+import scipy.stats as sc
 import matplotlib.pyplot as plt
 import time
-	
+
 
 def generate_two_2d_nd(n0, n1, mx0, my0, mx1, my1, lx0, ly0, lx1, ly1):
 	
@@ -30,8 +30,8 @@ def joindist(s0, s1):
 		res[i,:] = t[temp[i],:]
 		ans[i] = a[temp[i]]
 	return res, ans
-	
 
+	
 def form_dist(dist,ans):
 	
 	l0 = len(ans) - int(np.sum(ans))
@@ -49,8 +49,31 @@ def form_dist(dist,ans):
 		else:		
 			s0[j0,0] = dist[i,0]
 			s0[j0,1] = dist[i,1]
-			j0 +=1	
+			j0 +=1
 			
+	return s0, s1
+	
+	
+def draw_dist(dist,ans,act,pref,i):
+
+	s0, s1 = form_dist(dist, ans)
+
+	if (i > 0):
+	
+		plt.figure()
+		plt.grid()
+		plt.xlim(min(dist[:,0]),max(dist[:,0]))
+		plt.ylim(min(dist[:,1]),max(dist[:,1]))
+
+		plt.scatter(s0[:,0],s0[:,1],color='blue',s=5)
+		plt.scatter(s1[:,0],s1[:,1],color='green',s=5)
+		
+		eval = 100 * np.sum(np.abs(ans - act)) / len(act)
+		plt.title('After %s iterations of EM, error: %.3f%%'%(str(i),eval))
+
+		plt.savefig(pref + 'iter=' + str(i) + '.png', dpi = 400)
+		plt.cla()
+	
 	return s0, s1
 
 	
@@ -106,7 +129,41 @@ def kmeans(dist, par=1, eps=1e-8, max_iter=500):
 			plt.scatter(mx0,my0,color='yellow',marker='x')
 			plt.scatter(mx1,my1,color='orange',marker='x')
 	return a, b, i
+	
+
+def em(dist, ans, act, pref='', eps=100, max_iter=50):
+
+	s = dist.shape[0]
+	
+	for i in range(max_iter):
+	
+		s0, s1 = draw_dist(dist,ans,act,pref,i)
+		ndx0 = sc.norm(np.mean(s0[:,0]),np.std(s0[:,0]))
+		ndy0 = sc.norm(np.mean(s0[:,1]),np.std(s0[:,1]))
+		ndx1 = sc.norm(np.mean(s1[:,0]),np.std(s1[:,0]))
+		ndy1 = sc.norm(np.mean(s1[:,1]),np.std(s1[:,1]))
+		rat = np.sum(ans) / (len(ans) - np.sum(ans))
+		ans_n = np.zeros((s,1))
+		
+		for j in range(s):
+			p0 = ndx0.pdf(dist[j,0])*ndy0.pdf(dist[j,1])
+			p1 = ndx1.pdf(dist[j,0])*ndy1.pdf(dist[j,1])
+			if (p1*rat > p0):
+				ans_n[j] = 1
+			else: 
+				ans_n[j] = 0
+		
+		nval = np.sum(np.abs(ans_n - ans))
+		eval = np.sum(np.abs(ans_n - act)) / len(act)
+		print('iteration :',i,'| updated:',round(nval),'| eval: ','{:.3f}'.format(100*eval),'%')
+		
+		if (nval > eps):
+			ans = ans_n
+		else:
+			return ans_n, i	
 			
+	return ans_n, i
+
 	
 if __name__ == "__main__":
 	
@@ -115,18 +172,22 @@ if __name__ == "__main__":
 
 	ti = time.time()
 	cur_time = str(ti)
-	pref = 'kmeans_try_'+cur_time[5:]+'_'
+	pref = 'em_try_'+cur_time[5:]+'_'
 	
-	n0, n1 = 15000, 1000
+	n0, n1 = 10000, 5000
+#	n0, n1 = 15000, 1000
 
 #	mx0, my0, mx1, my1 = 5, 15, 20, 30	
 #	s0 = np.random.poisson(lam=(mx0, my0), size=(n0, 2))
 #	s1 = np.random.poisson(lam=(mx1, my1), size=(n1, 2))
 
-	mx0, my0, mx1, my1 = .1, .15, 4, 5
-	lx0, ly0, lx1, ly1 = 1.5, 1.15, 2.20, 2.30
+	mx0, my0, mx1, my1 = .1, .15, 1.2, 1.8
+	dx0, dy0, dx1, dy1 = 1.50, 1.25, 3.20, 4.40
 	
-	s0, s1 = generate_two_2d_nd(n0, n1, mx0, my0, mx1, my1, lx0, ly0, lx1, ly1)	
+#	mx0, my0, mx1, my1 = .1, .15, 4, 5
+#	dx0, dy0, dx1, dy1 = 1.5, 1.15, 2.20, 2.30
+	
+	s0, s1 = generate_two_2d_nd(n0, n1, mx0, my0, mx1, my1, dx0, dy0, dx1, dy1)	
 	dist, act = joindist(s0,s1)
 	
 	for t in dist:
@@ -159,10 +220,24 @@ if __name__ == "__main__":
 #	plt.scatter(s0[:,0],s0[:,1],color='blue',s=5)
 #	plt.scatter(s1[:,0],s1[:,1],color='green',s=5)		
 
-	eval = 100 * np.sum(np.abs(ans - act)) / len(act)
-	plt.title('After %s iterations, error: %.3f%%'%(str(i),eval))
-	plt.savefig(pref + 'fin.png', dpi = 400)
+	eval = np.sum(np.abs(ans - act)) / len(act)
+	plt.title('After %s iterations, error: %.3f%%'%(str(i),100*eval))
+	plt.savefig(pref + 'init.png', dpi = 400)
 	plt.cla()
-
 	
+	print('init eval:','{:.3f}'.format(100*eval),'%')
+	ans_n, i = em(dist,ans,act,pref)
+	
+	tval = round(time.time() - ti)
+	print('time elapsed after', str(i), 'iterations of em:',str(tval),'sec')
+	
+#	plt.figure()
+#	plt.grid()
+#	plt.xlim(min(dist[:,0]),max(dist[:,0]))
+#	plt.ylim(min(dist[:,1]),max(dist[:,1]))	
+#	plt.scatter(s0[:,0],s0[:,1],color='blue',s=5)
+#	plt.scatter(s1[:,0],s1[:,1],color='green',s=5)
+#	plt.title('Original distributions')
+#	plt.savefig(pref + 'orig.png', dpi = 400)
+#	plt.cla()	
 	
