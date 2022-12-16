@@ -142,13 +142,12 @@ def em(dist, ans, act, pref='', eps=100, max_iter=50):
 		ndy0 = sc.norm(np.mean(s0[:,1]),np.std(s0[:,1]))
 		ndx1 = sc.norm(np.mean(s1[:,0]),np.std(s1[:,0]))
 		ndy1 = sc.norm(np.mean(s1[:,1]),np.std(s1[:,1]))
-		rat = np.sum(ans) / (len(ans) - np.sum(ans))
 		ans_n = np.zeros((s,1))
 		
 		for j in range(s):
 			p0 = ndx0.pdf(dist[j,0])*ndy0.pdf(dist[j,1])
 			p1 = ndx1.pdf(dist[j,0])*ndy1.pdf(dist[j,1])
-			if (p1*rat > p0):
+			if (p1*np.sum(ans) > p0*(len(ans) - np.sum(ans))):
 				ans_n[j] = 1
 			else: 
 				ans_n[j] = 0
@@ -172,18 +171,15 @@ if __name__ == "__main__":
 
 	ti = time.time()
 	cur_time = str(ti)
-	pref = 'em_try_'+cur_time[5:]+'_'
+	pref = 'em_try_'+cur_time[4:-4]+'_'
 	
-	n0, n1 = 10000, 5000
+#	s0 = np.random.poisson(lam=(5, 15), size=(15000, 2))
+#	s1 = np.random.poisson(lam=(20, 30), size=(1000, 2))
+	
+	n0, n1 = 16000, 16000
 #	n0, n1 = 15000, 1000
-
-#	mx0, my0, mx1, my1 = 5, 15, 20, 30	
-#	s0 = np.random.poisson(lam=(mx0, my0), size=(n0, 2))
-#	s1 = np.random.poisson(lam=(mx1, my1), size=(n1, 2))
-
-	mx0, my0, mx1, my1 = .1, .15, 1.2, 1.8
-	dx0, dy0, dx1, dy1 = 1.50, 1.25, 3.20, 4.40
-	
+	mx0, my0, mx1, my1 = 1.1, 1.15, 5.2, 5.8
+	dx0, dy0, dx1, dy1 = 1.50, 1.25, 2.20, 1.40	
 #	mx0, my0, mx1, my1 = .1, .15, 4, 5
 #	dx0, dy0, dx1, dy1 = 1.5, 1.15, 2.20, 2.30
 	
